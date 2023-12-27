@@ -1,12 +1,15 @@
 FROM ubuntu:22.04
 
-RUN apt-get update -qq && apt-get install -y sqlite3 libpq-dev python3-pip
+RUN apt-get -y update
+RUN apt-get -y upgrade
+RUN apt-get install -y sqlite3 libsqlite3-dev 
+RUN apt-get install -y python3-pip
 
 WORKDIR /authen-service
 
 COPY requirements.txt .
 
-RUN pip install -r requirements.txt
+RUN pip3 install -r requirements.txt
 
 COPY . /authen-service
 

@@ -12,6 +12,8 @@ bcrypt = Bcrypt(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+# app.config['SECRET_KEY'] = 'thisisasecretkey'
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -98,8 +100,9 @@ def register():
         return redirect(url_for('login'))
 
     return render_template('register.html', form=form)
-
+# def init():
+    
 
 if __name__ == "__main__":
-    
-    app.run(debug=True)
+    # init()
+    app.run(host='0.0.0.0', port=5000,debug=True)
