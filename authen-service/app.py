@@ -1,11 +1,13 @@
-# auth_service.py
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 
 app_auth = Flask(__name__)
 app_auth.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app_auth.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app_auth.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'  # Change this to a secure secret key
+jwt = JWTManager(app_auth)
 db = SQLAlchemy(app_auth)
 
 class User(db.Model):
@@ -21,7 +23,9 @@ def login():
 
     user = User.query.filter_by(username=username).first()
     if user and check_password_hash(user.password, password):
-        return jsonify({'message': 'Login successful'}), 200
+        # Generate an access token
+        access_token = create_access_token(identity=user.username)
+        return jsonify({'access_token': access_token}), 200
     else:
         return jsonify({'message': 'Invalid credentials'}), 401
 
@@ -39,6 +43,13 @@ def register():
     db.session.commit()
 
     return jsonify({'message': 'Registration successful'}), 201
+
+# This route is just for testing the protected route
+@app_auth.route('/protected', methods=['GET'])
+@jwt_required()
+def protected():
+    current_user = get_jwt_identity()
+    return jsonify(logged_in_as=current_user), 200
 
 if __name__ == '__main__':
     db.create_all()

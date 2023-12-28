@@ -1,4 +1,3 @@
-# api_gateway.py
 from flask import Flask, render_template, redirect, url_for, jsonify, request, flash, session
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
@@ -30,11 +29,13 @@ def login():
         response = requests.post('http://localhost:5001/login', json=data)
 
         if response.status_code == 200:
-            # Redirect to the dashboard page after successful login
+            # Store the access token in the session
+            session['access_token'] = response.json().get('access_token')
             session['logged_in'] = True
+            print("Access Token:", session['access_token'])
             return redirect(url_for('dashboard'))
         else:
-            flash('Invalid credentials', 'error')  # Use flash to display an error message
+            flash('Invalid credentials', 'error')
             return render_template('login.html', form=form)
 
     return render_template('login.html', form=form)
@@ -65,6 +66,22 @@ def dashboard():
         return render_template('dashboard.html')
     else:
         flash('You need to log in first', 'error')
+        return redirect(url_for('login'))
+    
+@app.route('/product')
+def product():
+    # Check if the user is logged in and has an access token
+    if session.get('logged_in') and 'access_token' in session:
+        headers = {'Authorization': 'Bearer ' + session['access_token']}
+        response = requests.get('http://localhost:5001/protected', headers=headers)
+
+        if response.status_code == 200:
+            return render_template('product.html')
+        else:
+            flash('You need to log in and authorize access', 'error')
+            return redirect(url_for('login'))
+    else:
+        flash('You need to log in and authorize access', 'error')
         return redirect(url_for('login'))
     
 if __name__ == '__main__':
