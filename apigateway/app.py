@@ -1,5 +1,5 @@
 # api_gateway.py
-from flask import Flask, render_template, redirect, url_for, jsonify, request
+from flask import Flask, render_template, redirect, url_for, jsonify, request, flash, session
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import InputRequired, Length
@@ -30,9 +30,12 @@ def login():
         response = requests.post('http://localhost:5001/login', json=data)
 
         if response.status_code == 200:
-            return render_template('dashboard.html')
+            # Redirect to the dashboard page after successful login
+            session['logged_in'] = True
+            return redirect(url_for('dashboard'))
         else:
-            return render_template('login.html', form=form, error='Invalid credentials')
+            flash('Invalid credentials', 'error')  # Use flash to display an error message
+            return render_template('login.html', form=form)
 
     return render_template('login.html', form=form)
 
@@ -44,7 +47,7 @@ def register():
         response = requests.post('http://localhost:5001/register', json=data)
 
         if response.status_code == 201:
-            return render_template('dashboard.html')
+            return redirect(url_for('login'))
         else:
             return render_template('register.html', form=form, error='Registration failed')
 
@@ -52,8 +55,17 @@ def register():
 
 @app.route('/logout')
 def logout():
-    # Add logic for logging out here
+    session.pop('logged_in', None)
+    flash('You have been logged out', 'success')  # Use flash to display a success message
     return redirect(url_for('welcome'))
 
+@app.route('/dashboard')
+def dashboard():
+    if session.get('logged_in'):
+        return render_template('dashboard.html')
+    else:
+        flash('You need to log in first', 'error')
+        return redirect(url_for('login'))
+    
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
