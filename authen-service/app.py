@@ -2,11 +2,14 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 app_auth = Flask(__name__)
-app_auth.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app_auth.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("SQLALCHEMY_DATABASE_URI")
 app_auth.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app_auth.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'  # Change this to a secure secret key
+app_auth.config['JWT_SECRET_KEY'] = os.getenv("JWT_SECRET_KEY")  # Change this to a secure secret key
 jwt = JWTManager(app_auth)
 db = SQLAlchemy(app_auth)
 
@@ -14,6 +17,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     password = db.Column(db.String(100), nullable=False)
+    role = db.Column(db.String(20), default='user', nullable=False)
 
 @app_auth.route('/login', methods=['POST'])
 def login():
@@ -42,7 +46,7 @@ def register():
     db.session.add(new_user)
     db.session.commit()
 
-    return jsonify({'message': 'Registration successful'}), 201
+    return jsonify({'message': 'Registration successful', 'role': new_user.role}), 201
 
 # This route is just for testing the protected route
 @app_auth.route('/protected', methods=['GET'])

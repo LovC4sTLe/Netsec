@@ -3,9 +3,12 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import InputRequired, Length
 import requests
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key'  # Change this to a secure secret key
+app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")  # Change this to a secure secret key
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[InputRequired()])
@@ -26,7 +29,7 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         data = {'username': form.username.data, 'password': form.password.data}
-        response = requests.post('http://localhost:5001/login', json=data)
+        response = requests.post('http://127.0.0.1:5001/login', json=data)
 
         if response.status_code == 200:
             # Store the access token in the session
@@ -45,7 +48,7 @@ def register():
     form = RegisterForm()
     if form.validate_on_submit():
         data = {'username': form.username.data, 'password': form.password.data}
-        response = requests.post('http://localhost:5001/register', json=data)
+        response = requests.post('http://127.0.0.1:5001/register', json=data)
 
         if response.status_code == 201:
             return redirect(url_for('login'))
@@ -57,7 +60,7 @@ def register():
 @app.route('/logout')
 def logout():
     session.pop('logged_in', None)
-    flash('You have been logged out', 'success')  # Use flash to display a success message
+    flash('You have been logged out', 'success')
     return redirect(url_for('welcome'))
 
 @app.route('/dashboard')
@@ -73,7 +76,7 @@ def product():
     # Check if the user is logged in and has an access token
     if session.get('logged_in') and 'access_token' in session:
         headers = {'Authorization': 'Bearer ' + session['access_token']}
-        response = requests.get('http://localhost:5001/protected', headers=headers)
+        response = requests.get('http://127.0.0.1:5001/protected', headers=headers)
 
         if response.status_code == 200:
             return render_template('product.html')

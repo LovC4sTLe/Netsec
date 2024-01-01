@@ -1,0 +1,60 @@
+/* Reset CSS */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f4f4f4;
+    margin: 20px;
+}
+
+/* Header styling */
+header {
+    text-align: center;
+    padding: 20px;
+    background-color: #333;
+    color: #fff;
+}
+
+/* Product styling */
+.product {
+    border: 1px solid #ccc;
+    margin: 10px;
+    text-align: center;
+    max-width: 250px;
+    flex: 1 0 200px;
+    overflow: hidden;
+    background-color: #fff;
+    transition: transform 0.3s ease-in-out;
+}
+
+.product:hover {
+    transform: scale(1.05);
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+    object-fit: cover;
+}
+
+h2 {
+    color: #333;
+    margin-top: 10px;
+}
+
+p {
+    color: #666;
+    margin-bottom: 10px;
+}
+
+/* Responsive styling */
+@media screen and (max-width: 768px) {
+    .product {
+        max-width: 100%;
+        flex: 1 0 100%;
+    }
+}
