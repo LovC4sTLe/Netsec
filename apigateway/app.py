@@ -5,10 +5,12 @@ from wtforms.validators import InputRequired, Length
 import requests
 import os
 from dotenv import load_dotenv
+from flask_jwt_extended import decode_token, JWTManager  
 
 load_dotenv()
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")  # Change this to a secure secret key
+app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")  # Set Flask's secret key
+jwt = JWTManager(app)  # Initialize JWTManager
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[InputRequired()])
@@ -92,8 +94,10 @@ def product():
 def add_product():
     # Check if the user is logged in and has an access token
     if session.get('logged_in') and 'access_token' in session:
-        # Get the user's role from the session
-        user_role = session.get('user_role')
+        # Decode the JWT token to get user information, including the role
+        token_data = decode_token(session['access_token'])
+        print("Decoded Token:", token_data)
+        user_role = token_data.get('role')
 
         # Check if the user has the 'modder' role
         if user_role == 'modder':
