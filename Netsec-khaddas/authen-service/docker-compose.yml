@@ -7,7 +7,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - .env
     ports:
-      - 127.0.0.1:5000:5000
+      - 127.0.0.1:5001:5001
     volumes:
       - .:/authen_service

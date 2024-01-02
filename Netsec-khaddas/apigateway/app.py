@@ -3,9 +3,12 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import InputRequired, Length
 import requests
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key'  # Change this to a secure secret key
+app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")  # Change this to a secure secret key
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[InputRequired()])
@@ -26,7 +29,7 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         data = {'username': form.username.data, 'password': form.password.data}
-        response = requests.post('http://localhost:5001/login', json=data)
+        response = requests.post('http://127.0.0.1:5001/login', json=data)
 
         if response.status_code == 200:
             # Store the access token in the session
@@ -45,7 +48,7 @@ def register():
     form = RegisterForm()
     if form.validate_on_submit():
         data = {'username': form.username.data, 'password': form.password.data}
-        response = requests.post('http://localhost:5001/register', json=data)
+        response = requests.post('http://127.0.0.1:5001/register', json=data)
 
         if response.status_code == 201:
             return redirect(url_for('login'))
@@ -57,7 +60,7 @@ def register():
 @app.route('/logout')
 def logout():
     session.pop('logged_in', None)
-    flash('You have been logged out', 'success')  # Use flash to display a success message
+    flash('You have been logged out', 'success')
     return redirect(url_for('welcome'))
 
 @app.route('/dashboard')
@@ -78,18 +81,23 @@ def show_products():
         if response.status_code == 200:
             products = response.json().get('data')
 
-            # Ensure 'filename' is present in each product
-            for product in products:
-                if 'filename' not in product:
-                    product['filename'] = ''  # Set a default value or handle it appropriately
+            if products is not None:  # Kiểm tra xem products có giá trị None hay không
+                # Ensure 'filename' is present in each product
+                for product in products:
+                    if 'filename' not in product:
+                        product['filename'] = ''  # Set a default value or handle it appropriately
 
-            return render_template('index.html', products=products)
+                return render_template('index.html', products=products)
+            else:
+                flash('No products found', 'error')  # Xử lý khi products có giá trị None
+                return render_template('index.html', products=[])  # Trả về danh sách rỗng hoặc xử lý phù hợp
         else:
             flash('You need to log in and authorize access', 'error')
             return redirect(url_for('login'))
     else:
         flash('You need to log in and authorize access', 'error')
         return redirect(url_for('login'))
+
 
 
 @app.route('/options', methods=['GET', 'POST'])
@@ -143,6 +151,6 @@ def edit(pro_id):
         except Exception as e:
             flash('An error occurred while processing the request', 'error')
     return render_template('edit.html')
-
+    
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
