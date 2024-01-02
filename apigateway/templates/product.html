@@ -3,64 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Product Page</title>
-    <link rel="stylesheet" href="../static/product.css" />
+    <title>Products</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-around;
         }
-
-        header {
-            width: 100%;
-            text-align: center;
-            margin-bottom: 20px;
+        h1 {
+            color: #333;
         }
-
-        .product {
-            border: 1px solid #ccc;
-            margin: 10px;
-            text-align: center;
-            max-width: 250px;
-            flex: 1 0 200px;
-            overflow: hidden;
+        ul {
+            list-style-type: none;
+            padding: 0;
         }
-
-        img {
-            max-width: 100%;
-            height: auto;
-            object-fit: cover;
+        li {
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        form {
+            margin-top: 20px;
+        }
+        .flash {
+            color: red;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
+    <h1>Product List</h1>
+    
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="flash">
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
 
-    <header>
-        <h1>All Products</h1>
-    </header>
+    <ul>
+        {% for product in products %}
+            <li>{{ product.name }} - ${{ product.price }}</li>
+        {% endfor %}
+    </ul>
 
-    <div class="product">
-        <img src="../static/banana.jpg" alt="Product 1">
-        <h2>Banana</h2>
-        <p>Price: $20.00</p>
-    </div>
-
-    <div class="product">
-        <img src="../static/dua.jpg" alt="Product 2">
-        <h2>Watermelon</h2>
-        <p>Price: $25.00</p>
-    </div>
-
-    <div class="product">
-        <img src="../static/butter.jpg" alt="Product 3">
-        <h2>Avocado</h2>
-        <p>Price: $30.00</p>
-    </div>
-
-    <!-- Thêm các sản phẩm khác nếu cần -->
-
+    <form method="POST" action="{{ url_for('add_product') }}">
+        <h2>Add New Product</h2>
+        <label for="name">Product Name:</label>
+        <input type="text" name="name" required>
+        <br>
+        <label for="price">Product Price:</label>
+        <input type="number" name="price" step="0.01" required>
+        <br>
+        <input type="submit" value="Add Product">
+    </form>
 </body>
 </html>

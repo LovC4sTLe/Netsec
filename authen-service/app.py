@@ -42,18 +42,15 @@ def register():
     if User.query.filter_by(username=username).first():
         return jsonify({'message': 'Username already exists'}), 400
 
-    new_user = User(username=username, password=generate_password_hash(password, method='sha256'))
+    # Set the role to 'modder' for the new user
+    role = data.get('role', 'user')  # Default to 'user' if 'role' is not provided
+    new_user = User(username=username, password=generate_password_hash(password, method='sha256'), role=role)
+    
     db.session.add(new_user)
     db.session.commit()
 
     return jsonify({'message': 'Registration successful', 'role': new_user.role}), 201
 
-# This route is just for testing the protected route
-@app_auth.route('/protected', methods=['GET'])
-@jwt_required()
-def protected():
-    current_user = get_jwt_identity()
-    return jsonify(logged_in_as=current_user), 200
 
 if __name__ == '__main__':
     db.create_all()

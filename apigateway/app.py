@@ -71,18 +71,46 @@ def dashboard():
         flash('You need to log in first', 'error')
         return redirect(url_for('login'))
     
-@app.route('/product')
+@app.route('/products')
 def product():
     # Check if the user is logged in and has an access token
     if session.get('logged_in') and 'access_token' in session:
         headers = {'Authorization': 'Bearer ' + session['access_token']}
-        response = requests.get('http://127.0.0.1:5001/protected', headers=headers)
+        response = requests.get('http://127.0.0.1:5002/products', headers=headers)
 
         if response.status_code == 200:
-            return render_template('product.html')
+            products = response.json().get('products', [])
+            return render_template('products.html', products=products)
         else:
-            flash('You need to log in and authorize access', 'error')
-            return redirect(url_for('login'))
+            flash('Error fetching products', 'error')
+            return redirect(url_for('dashboard'))
+    else:
+        flash('You need to log in and authorize access', 'error')
+        return redirect(url_for('login'))
+
+@app.route('/add_product', methods=['POST'])
+def add_product():
+    # Check if the user is logged in and has an access token
+    if session.get('logged_in') and 'access_token' in session:
+        # Get the user's role from the session
+        user_role = session.get('user_role')
+
+        # Check if the user has the 'modder' role
+        if user_role == 'modder':
+            # Forward the request to the product service
+            headers = {'Authorization': 'Bearer ' + session['access_token']}
+            data = request.get_json()
+            response = requests.post('http://127.0.0.1:5002/add_product', json=data, headers=headers)
+
+            if response.status_code == 201:
+                flash('Product added successfully', 'success')
+            else:
+                flash('Error adding product', 'error')
+
+            return redirect(url_for('dashboard'))
+        else:
+            flash('You do not have permission to add a new product', 'error')
+            return redirect(url_for('dashboard'))
     else:
         flash('You need to log in and authorize access', 'error')
         return redirect(url_for('login'))
