@@ -10,7 +10,7 @@ from flask_jwt_extended import decode_token, JWTManager
 load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")  # Set Flask's secret key
-jwt = JWTManager(app)  # Initialize JWTManager
+jwt = JWTManager(app) 
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[InputRequired()])
@@ -73,47 +73,108 @@ def dashboard():
         flash('You need to log in first', 'error')
         return redirect(url_for('login'))
     
-@app.route('/products')
-def product():
+@app.route('/product')
+def show_products():
     # Check if the user is logged in and has an access token
     if session.get('logged_in') and 'access_token' in session:
         headers = {'Authorization': 'Bearer ' + session['access_token']}
-        response = requests.get('http://127.0.0.1:5002/products', headers=headers)
-
+        response = requests.get('http://localhost:5003/product', headers=headers)
+    
         if response.status_code == 200:
-            products = response.json().get('products', [])
-            return render_template('products.html', products=products)
+            products = response.json().get('data')
+
+            if products is not None:  # Kiểm tra xem products có giá trị None hay không
+                # Ensure 'filename' is present in each product
+                for product in products:
+                    if 'filename' not in product:
+                        product['filename'] = ''  # Set a default value or handle it appropriately
+
+                return render_template('index.html', products=products)
+            else:
+                flash('No products found', 'error')  # Xử lý khi products có giá trị None
+                return render_template('index.html', products=[])  # Trả về danh sách rỗng hoặc xử lý phù hợp
         else:
-            flash('Error fetching products', 'error')
-            return redirect(url_for('dashboard'))
+            flash('You need to log in and authorize access', 'error')
+            return redirect(url_for('login'))
     else:
         flash('You need to log in and authorize access', 'error')
         return redirect(url_for('login'))
 
-@app.route('/add_product', methods=['POST'])
+
+@app.route('/options', methods=['GET', 'POST'])
 def add_product():
-    # Check if the user is logged in and has an access token
     if session.get('logged_in') and 'access_token' in session:
-        # Decode the JWT token to get user information, including the role
-        token_data = decode_token(session['access_token'])
-        print("Decoded Token:", token_data)
-        user_role = token_data.get('role')
+        headers = {'Authorization': 'Bearer ' + session['access_token']}
+        decoded_token = decode_token(session['access_token'])
+        print("Decoded Token:", decoded_token)
+        user_role = decoded_token.get('role', 'user')
 
-        # Check if the user has the 'modder' role
-        if user_role == 'modder':
-            # Forward the request to the product service
-            headers = {'Authorization': 'Bearer ' + session['access_token']}
-            data = request.get_json()
-            response = requests.post('http://127.0.0.1:5002/add_product', json=data, headers=headers)
+        if user_role == 'admin':
+            if request.method == 'POST':
+                # Your existing logic for adding a product
+                try:
+                    # Logic to add a new product
+                    data = {
+                        'category': request.form.get('category'),
+                        'pro_name': request.form.get('pro_name'),
+                        'description': request.form.get('description'),
+                        'price_range': request.form.get('price_range'),
+                        'comments': request.form.get('comments'),
+                    }
 
-            if response.status_code == 201:
-                flash('Product added successfully', 'success')
-            else:
-                flash('Error adding product', 'error')
+                    files = {'image': request.files['image']}
+                    headers = {'Authorization': 'Bearer ' + session.get('access_token', '')}
 
-            return redirect(url_for('dashboard'))
+                    response = requests.post('http://localhost:5003/product', data=data, files=files, headers=headers)
+
+                    if response.status_code == 200:
+                        flash('Product added successfully', 'success')
+                    else:
+                        flash('Failed to add product', 'error')
+                except Exception as e:
+                    flash('An error occurred while processing the request', 'error')
+            return render_template('product.html') 
         else:
-            flash('You do not have permission to add a new product', 'error')
+            flash('You do not have the required role to access this page', 'error')
+            return redirect(url_for('dashboard'))
+        
+    else:
+        flash('You need to log in and authorize access', 'error')
+        return redirect(url_for('login'))
+    
+@app.route('/edit/<int:pro_id>', methods=['GET', 'POST'])
+def edit(pro_id):
+    if session.get('logged_in') and 'access_token' in session:
+        headers = {'Authorization': 'Bearer ' + session['access_token']}
+        decoded_token = decode_token(session['access_token'])
+        user_role = decoded_token.get('role', 'user')
+
+        if user_role == 'admin':
+            if request.method == 'POST':
+                # Your existing logic for editing a product
+                try:
+                    data = {
+                        "category": request.form.get("category"),
+                        "pro_name": request.form.get("pro_name"),
+                        "description": request.form.get("description"),
+                        "price_range": request.form.get("price_range"),
+                        "comments": request.form.get("comments"),
+                    }
+
+                    headers = {'Authorization': 'Bearer ' + session.get('access_token', '')}
+
+                    files = {'image': request.files['image']}
+                    response = requests.post(f'http://localhost:5003/edit/{pro_id}', data=data, files=files, headers=headers)
+                    if response.status_code == 200:
+                        flash('Product edited successfully', 'success')
+                    else:
+                        flash('Failed to edit product', 'error')
+
+                except Exception as e:
+                    flash('An error occurred while processing the request', 'error')
+            return render_template('edit.html')
+        else:
+            flash('You do not have the required role to edit products', 'error')
             return redirect(url_for('dashboard'))
     else:
         flash('You need to log in and authorize access', 'error')
