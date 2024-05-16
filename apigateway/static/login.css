@@ -1,0 +1,10 @@
+body {
+  background-color: beige;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 50vh; /* Chiều cao 100% của viewport */
+  margin: 1; /* Loại bỏ margin mặc định */
+  position: relative;
+}

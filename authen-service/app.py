@@ -1,108 +1,57 @@
-from flask import Flask, render_template, url_for, redirect
+from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
-from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField
-from wtforms.validators import InputRequired, Length, ValidationError
-from flask_bcrypt import Bcrypt
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 import os
-app = Flask(__name__)
-db = SQLAlchemy(app)
-bcrypt = Bcrypt(app)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI')
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+from dotenv import load_dotenv
 
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-# app.config['SECRET_KEY'] = 'thisisasecretkey'
+load_dotenv()
+app_auth = Flask(__name__)
+app_auth.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("SQLALCHEMY_DATABASE_URI")
+app_auth.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app_auth.config['JWT_SECRET_KEY'] = os.getenv("JWT_SECRET_KEY")  # Change this to a secure secret key
+jwt = JWTManager(app_auth)
+db = SQLAlchemy(app_auth)
 
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
-
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
-
-class User(db.Model, UserMixin):
+class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(20), nullable=False, unique=True)
-    password = db.Column(db.String(80), nullable=False)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password = db.Column(db.String(100), nullable=False)
+    role = db.Column(db.String(20), default='user', nullable=False)
 
-
-class RegisterForm(FlaskForm):
-    username = StringField(validators=[
-                           InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Username"})
-
-    password = PasswordField(validators=[
-                             InputRequired(), Length(min=8, max=20)], render_kw={"placeholder": "Password"})
-
-    submit = SubmitField('Register')
-
-    def validate_username(self, username):
-        existing_user_username = User.query.filter_by(
-            username=username.data).first()
-        if existing_user_username:
-            raise ValidationError(
-                'That username already exists. Please choose a different one.')
-
-
-class LoginForm(FlaskForm):
-    username = StringField(validators=[
-                           InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Username"})
-
-    password = PasswordField(validators=[
-                             InputRequired(), Length(min=8, max=20)], render_kw={"placeholder": "Password"})
-
-    submit = SubmitField('Login')
-
-
-@app.route('/')
-def home():
-    return render_template('home.html')
-
-
-@app.route('/login', methods=['GET', 'POST'])
+@app_auth.route('/login', methods=['POST'])
 def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
-        if user:
-            if bcrypt.check_password_hash(user.password, form.password.data):
-                login_user(user)
-                return redirect(url_for('dashboard'))
-    return render_template('login.html', form=form)
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
 
+    user = User.query.filter_by(username=username).first()
+    if user and check_password_hash(user.password, password):
+        # Generate an access token
+        access_token = create_access_token(identity=user.username, additional_claims={'role': user.role})
+        return jsonify({'access_token': access_token}), 200
+    else:
+        return jsonify({'message': 'Invalid credentials'}), 401
 
-@app.route('/dashboard', methods=['GET', 'POST'])
-@login_required
-def dashboard():
-    return render_template('dashboard.html')
-
-
-@app.route('/logout', methods=['GET', 'POST'])
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for('login'))
-
-
-@ app.route('/register', methods=['GET', 'POST'])
+@app_auth.route('/register', methods=['POST'])
 def register():
-    form = RegisterForm()
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
 
-    if form.validate_on_submit():
-        hashed_password = bcrypt.generate_password_hash(form.password.data)
-        new_user = User(username=form.username.data, password=hashed_password)
-        db.session.add(new_user)
-        db.session.commit()
-        return redirect(url_for('login'))
+    if User.query.filter_by(username=username).first():
+        return jsonify({'message': 'Username already exists'}), 400
 
-    return render_template('register.html', form=form)
-# def init():
+    # Set the role to 'modder' for the new user
+    role = data.get('role', 'user')  # Default to 'user' if 'role' is not provided
+    new_user = User(username=username, password=generate_password_hash(password, method='sha256'), role=role)
     
+    db.session.add(new_user)
+    db.session.commit()
 
-if __name__ == "__main__":
-    # init()
-    app.run(host='0.0.0.0', port=5000,debug=True)
+    return jsonify({'message': 'Registration successful', 'role': new_user.role}), 201
+
+
+if __name__ == '__main__':
+    db.create_all()
+    app_auth.run(host='0.0.0.0', port=5001, debug=True)
